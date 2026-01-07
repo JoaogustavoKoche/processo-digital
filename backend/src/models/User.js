@@ -1,14 +1,26 @@
-const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const { Model, DataTypes } = require('sequelize');
 
-const User = sequelize.define('User', {
-    nome: DataTypes.STRING,
-    email: {
-        type: DataTypes.STRING,
-        unique: true,
-    },
-    senha: DataTypes.STRING,
-    perfil:DataTypes.STRING, // admin, servidor, gestor
-});
+class User extends Model {
+  static init(sequelize) {
+    return super.init(
+      {
+        nome: DataTypes.STRING,
+        email: DataTypes.STRING,
+        senha: DataTypes.STRING,
+        setor_id: DataTypes.INTEGER,
+      },
+      {
+        sequelize,
+        tableName: 'usuarios',
+      }
+    );
+  }
+
+  static associate(models) {
+    this.belongsTo(models.Setor, { foreignKey: 'setor_id' });
+    this.hasMany(models.Processo, { foreignKey: 'usuario_id' });
+    this.hasMany(models.Movimentacao, { foreignKey: 'usuario_id' });
+  }
+}
 
 module.exports = User;

@@ -1,34 +1,36 @@
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const connection = require('../database/connection');
+const jwt = require('jsonwebtoken');
+const { User } = require('../models');
 
 module.exports = {
   async login(req, res) {
     const { email, senha } = req.body;
 
-    const result = await connection.query(
-      'SELECT * FROM usuarios WHERE email = $1',
-      [email]
-    );
+    const user = await User.findOne({ where: { email } });
 
-    if (result.rowCount === 0) {
-      return res.status(401).json({ error: 'Usuário não encontrado' });
+    if (!user) {
+      return res.status(400).json({ erro: 'Usuário não encontrado' });
     }
 
-    const user = result.rows[0];
+    const senhaOk = await bcrypt.compare(senha, user.senha);
 
-    const senhaValida = await bcrypt.compare(senha, user.senha);
-
-    if (!senhaValida) {
-      return res.status(401).json({ error: 'Senha inválida' });
+    if (!senhaOk) {
+      return res.status(400).json({ erro: 'Senha incorreta' });
     }
 
     const token = jwt.sign(
       { id: user.id },
-      process.env.JWT_SECRET,
+      'segredo_digital',
       { expiresIn: '8h' }
     );
 
-    return res.json({ token });
-  }
+    return res.json({
+      user: {
+        id: user.id,
+        nome: user.nome,
+        setor_id: user.setor_id,
+      },
+      token,
+    });
+  },
 };
