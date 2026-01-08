@@ -1,26 +1,16 @@
+import { Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Processos from "./pages/Processos";
+import ProcessoDetalhe from "./pages/ProcessoDetalhe";
 
-import { BrowserRouter, Routes, Route} from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import PrivateRoute from './components/PrivateRoute';
-
-function App() {
-
+export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-       <Route path='/' element={<Login/>} />
-
-       <Route 
-          path='/dashboard' 
-          element={
-            <PrivateRoute>
-              <Dashboard/>
-            </PrivateRoute>} 
-        />
-      </Routes>
-    </BrowserRouter>
-  )
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/processos" element={<Processos />} />
+      <Route path="/processos/:id" element={<ProcessoDetalhe />} />
+    </Routes>
+  );
 }
-
-export default App

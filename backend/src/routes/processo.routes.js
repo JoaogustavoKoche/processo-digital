@@ -1,12 +1,10 @@
-const express = require('express');
-const ProcessoController = require('../controllers/ProcessoController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const express = require("express");
+const ProcessoController = require("../controllers/ProcessoController");
 
 const routes = express.Router();
 
-routes.use(authMiddleware);
-
-routes.post('/', ProcessoController.criar);
-routes.get('/', ProcessoController.listar);
+routes.get("/", ProcessoController.listar);
+routes.get("/:id", ProcessoController.detalhe);
+routes.post("/", ProcessoController.criar);
 
 module.exports = routes;

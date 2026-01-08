@@ -1,53 +1,61 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import "./Login.css";
 
-function Login() {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [erro, setErro] = useState(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErro(null);
 
     try {
-      const response = await api.post('/login', {
-        email,
-        senha,
-      });
-
-      localStorage.setItem('token', response.data.token);
-
-      navigate('/dashboard');
-    } catch (error) {
-      alert('Erro ao fazer login');
-      console.error(error);
+      await api.post("/auth/login", { email, senha });
+      navigate("/dashboard");
+    } catch (err) {
+      const msg =
+        err?.response?.data?.erro ||
+        err?.response?.data?.message ||
+        "Erro ao fazer login";
+      setErro(msg);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Login</h2>
+    <div className="login-container">
+      <div className="login-card">
+        <h2>Sistema de Processo Digital</h2>
 
-      <input
-        type="email"
-        placeholder="E-mail"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
+        <form className="login-form" onSubmit={handleSubmit}>
+          <input
+            type="email"
+            placeholder="E-mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-      <input
-        type="password"
-        placeholder="Senha"
-        value={senha}
-        onChange={(e) => setSenha(e.target.value)}
-        required
-      />
+          <input
+            type="password"
+            placeholder="Senha"
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            required
+          />
 
-      <button type="submit">Entrar</button>
-    </form>
+          <button type="submit">Entrar</button>
+
+          {erro && <div className="login-error">{erro}</div>}
+        </form>
+
+        <div className="login-footer">
+          © {new Date().getFullYear()} Processo Digital
+        </div>
+      </div>
+    </div>
   );
 }
-
-export default Login;

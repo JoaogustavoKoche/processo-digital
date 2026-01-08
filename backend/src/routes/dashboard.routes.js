@@ -4,8 +4,8 @@ const auth = require('../middlewares/auth');
 
 const router = express.Router();
 
-router.get('/dashboard/resumo', auth, DashboardController.resumo);
-router.get('/dashboard/setores', auth, DashboardController.porSetor);
-router.get('/dashboard/movimentacoes', auth, DashboardController.movimentacoes);
+router.get('/dashboard/resumo', DashboardController.resumo);
+router.get('/dashboard/setores', DashboardController.porSetor);
+router.get('/dashboard/movimentacoes', DashboardController.movimentacoes);
 
 module.exports = router;

@@ -1,0 +1,86 @@
+/* Reset básico */
+* {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Tela inteira */
+.login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f766e, #115e59);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Card do login */
+.login-card {
+  background: #ffffff;
+  padding: 32px;
+  width: 100%;
+  max-width: 360px;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Título */
+.login-card h2 {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #0f172a;
+}
+
+/* Formulário */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Inputs */
+.login-form input {
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  font-size: 14px;
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: #0f766e;
+  box-shadow: 0 0 0 1px #0f766e;
+}
+
+/* Botão */
+.login-form button {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #0f766e;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-form button:hover {
+  background-color: #115e59;
+}
+
+/* Mensagem de erro */
+.login-error {
+  margin-top: 8px;
+  color: #dc2626;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Rodapé opcional */
+.login-footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+}

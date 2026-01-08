@@ -11,7 +11,8 @@ class User extends Model {
       },
       {
         sequelize,
-        tableName: 'usuarios',
+        tableName: 'users',
+        timestamps: true,
       }
     );
   }

@@ -25,6 +25,12 @@ app.use('/finalizacoes', finalizacaoRoutes);
 app.use('/tramitacoes', tramitacaoRoutes);
 app.use('/anexos', anexoRoutes);
 
+
+app.get('/ping', (req, res) => {
+  res.json({ ok: true });
+});
+
+
 async function start() {
   await sequelize.authenticate();
   await sequelize.sync({ alter: false });

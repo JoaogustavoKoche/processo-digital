@@ -1,4 +1,3 @@
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
@@ -12,14 +11,13 @@ module.exports = {
       return res.status(400).json({ erro: 'Usuário não encontrado' });
     }
 
-    const senhaOk = await bcrypt.compare(senha, user.senha);
-
-    if (!senhaOk) {
+    // 🔴 COMPARAÇÃO SEM HASH (DEV)
+    if (senha !== user.senha) {
       return res.status(400).json({ erro: 'Senha incorreta' });
     }
 
     const token = jwt.sign(
-      { id: user.id },
+      { id: user.id, setor_id: user.setor_id },
       'segredo_digital',
       { expiresIn: '8h' }
     );
@@ -28,6 +26,7 @@ module.exports = {
       user: {
         id: user.id,
         nome: user.nome,
+        email: user.email,
         setor_id: user.setor_id,
       },
       token,

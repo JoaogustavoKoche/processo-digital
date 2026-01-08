@@ -1,20 +1,7 @@
+// src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-
-// Instância central do Axios
-const api = axios.create({
-  baseURL: "http://localhost:3333",
-  timeout: 5000,
-});
+import api from "../services/api";
+import "./Dashboard.css";
 
 export default function Dashboard() {
   const [resumo, setResumo] = useState(null);
@@ -23,105 +10,129 @@ export default function Dashboard() {
   const [erro, setErro] = useState(null);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setErro("Usuário não autenticado. Faça login novamente.");
-      return;
-    }
-
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    let cancelado = false;
 
     async function carregarDashboard() {
       try {
+        const config = { timeout: 8000 };
+
         const [resumoRes, setorRes, movRes] = await Promise.all([
-          api.get("/dashboard/resumo"),
-          api.get("/dashboard/setores"),
-          api.get("/dashboard/movimentacoes"),
+          api.get("/dashboard/resumo", config),
+          api.get("/dashboard/setores", config),
+          api.get("/dashboard/movimentacoes", config),
         ]);
+
+        if (cancelado) return;
 
         setResumo(resumoRes.data);
         setPorSetor(setorRes.data);
         setMovimentacoes(movRes.data);
       } catch (err) {
-        console.error("Erro ao carregar dashboard:", err);
-        setErro(
-          "Não foi possível conectar ao servidor. Verifique se o backend está rodando na porta 3333."
-        );
+        console.error("Erro dashboard:", err);
+
+        if (err?.code === "ECONNABORTED") {
+          setErro("Timeout: o backend não respondeu em 8s.");
+          return;
+        }
+
+        const serverMsg =
+          err?.response?.data?.erro || err?.response?.data?.message;
+
+        setErro(serverMsg || "Erro ao conectar com o servidor backend.");
       }
     }
 
     carregarDashboard();
+
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
-  if (erro) return <p className="p-6 text-red-600">{erro}</p>;
-
-  if (!resumo) return <p className="p-6">Carregando...</p>;
+  if (erro) return <p className="state-error">{erro}</p>;
+  if (!resumo) return <p className="state-text">Carregando...</p>;
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <div>
+          <h1 className="dashboard-title">Dashboard</h1>
+          <p className="dashboard-subtitle">
+            Visão geral dos processos, setores e movimentações recentes
+          </p>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm">Total de Processos</p>
-            <p className="text-2xl font-bold">{resumo.total}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm">Abertos</p>
-            <p className="text-2xl font-bold">{resumo.abertos}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm">Em Análise</p>
-            <p className="text-2xl font-bold">{resumo.emAnalise}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-sm">Finalizados</p>
-            <p className="text-2xl font-bold">{resumo.finalizados}</p>
-          </CardContent>
-        </Card>
+        <div className="dashboard-actions">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => window.location.reload()}
+          >
+            Atualizar
+          </button>
+          <button type="button" className="btn btn-primary">
+            Novo Processo
+          </button>
+        </div>
       </div>
 
-      <Card className="p-4">
-        <h2 className="font-semibold mb-4">Processos por Setor</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={porSetor}>
-            <XAxis dataKey="setor" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="total" />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <p className="kpi-label">Total de Processos</p>
+          <p className="kpi-value">{resumo.total}</p>
+        </div>
 
-      <Card className="p-4">
-        <h2 className="font-semibold mb-4">Últimas Movimentações</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left border-b">
-              <th className="py-2">Processo</th>
-              <th>Descrição</th>
-              <th>Usuário</th>
-            </tr>
-          </thead>
-          <tbody>
-            {movimentacoes.map((m) => (
-              <tr key={m.id} className="border-b">
-                <td className="py-2">{m.processo?.titulo || "-"}</td>
-                <td>{m.descricao}</td>
-                <td>{m.usuario?.nome || "-"}</td>
+        <div className="kpi-card">
+          <p className="kpi-label">Abertos</p>
+          <p className="kpi-value">{resumo.abertos}</p>
+        </div>
+
+        <div className="kpi-card">
+          <p className="kpi-label">Em Análise</p>
+          <p className="kpi-value">{resumo.emAnalise}</p>
+        </div>
+
+        <div className="kpi-card">
+          <p className="kpi-label">Finalizados</p>
+          <p className="kpi-value">{resumo.finalizados}</p>
+        </div>
+      </div>
+
+      <div className="section">
+        <h2 className="section-title">Processos por Setor</h2>
+        <ul className="setor-list">
+          {porSetor.map((s, idx) => (
+            <li key={idx} className="setor-item">
+              {s.setor} <span className="badge">{s.total}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="section">
+        <h2 className="section-title">Últimas Movimentações</h2>
+
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Processo</th>
+                <th>Descrição</th>
+                <th>Usuário</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
+            </thead>
+            <tbody>
+              {movimentacoes.map((m) => (
+                <tr key={m.id}>
+                  <td>{m.processo?.titulo || "-"}</td>
+                  <td>{m.descricao}</td>
+                  <td>{m.usuario?.nome || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

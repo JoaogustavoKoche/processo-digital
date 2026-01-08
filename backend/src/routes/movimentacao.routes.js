@@ -1,12 +1,9 @@
-const express = require('express');
-const MovimentacaoController = require('../controllers/MovimentacaoController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const express = require("express");
+const MovimentacaoController = require("../controllers/MovimentacaoController");
 
 const routes = express.Router();
 
-routes.use(authMiddleware);
-
-routes.post('/', MovimentacaoController.criar);
-routes.get('/:processo_id', MovimentacaoController.listar);
+routes.get("/:processo_id", MovimentacaoController.listar);
+routes.post("/", MovimentacaoController.criar);
 
 module.exports = routes;

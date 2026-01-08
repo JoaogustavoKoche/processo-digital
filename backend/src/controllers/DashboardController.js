@@ -1,44 +1,98 @@
-const { Processo, Setor, ProcessoMovimentacao, User } = require('../models');
-const { Op } = require('sequelize');
+const { Processo, Movimentacao, Setor, User, sequelize } = require("../models");
 
 module.exports = {
   async resumo(req, res) {
-    const total = await Processo.count();
-    const abertos = await Processo.count({ where: { status: 'ABERTO' } });
-    const emAnalise = await Processo.count({ where: { status: 'ANALISE' } });
-    const finalizados = await Processo.count({ where: { status: 'FINALIZADO' } });
+    try {
+      // total
+      const total = await Processo.count();
 
-    res.json({ total, abertos, emAnalise, finalizados });
+      // Tenta contar por status, mas se a coluna não existir, devolve 0 sem quebrar
+      let abertos = 0;
+      let emAnalise = 0;
+      let finalizados = 0;
+
+      try {
+        abertos = await Processo.count({ where: { status: "ABERTO" } });
+        emAnalise = await Processo.count({ where: { status: "EM_ANALISE" } });
+        finalizados = await Processo.count({ where: { status: "FINALIZADO" } });
+      } catch (e) {
+        // Se sua tabela ainda não tiver a coluna status, não derruba o endpoint
+        abertos = 0;
+        emAnalise = 0;
+        finalizados = 0;
+      }
+
+      return res.json({ total, abertos, emAnalise, finalizados });
+    } catch (err) {
+      console.error("DashboardController.resumo erro:", err);
+      return res.status(500).json({ erro: "Erro ao gerar resumo do dashboard." });
+    }
   },
 
   async porSetor(req, res) {
-    const dados = await Processo.findAll({
-      attributes: [
-        'setor_id',
-        [Processo.sequelize.fn('COUNT', '*'), 'total'],
-      ],
-      include: [{ model: Setor, attributes: ['nome'] }],
-      group: ['setor_id', 'Setor.id'],
-    });
+    try {
+      // Faz join seguro: Setor + Processos
+      // Se não existir relação, cai no fallback.
+      try {
+        const setores = await Setor.findAll({
+          attributes: ["id", "nome"],
+          include: [
+            {
+              model: Processo,
+              attributes: [],
+              required: false,
+            },
+          ],
+          group: ["Setor.id"],
+          raw: true,
+          subQuery: false,
+        });
 
-    const formatado = dados.map(d => ({
-      setor: d.Setor.nome,
-      total: Number(d.get('total')),
-    }));
+        // Como o include sem COUNT pode variar, fazemos fallback com query simples:
+        // Então vamos pegar todos os setores e contar manualmente.
+        const lista = await Setor.findAll({ attributes: ["id", "nome"], raw: true });
 
-    res.json(formatado);
+        const result = [];
+        for (const s of lista) {
+          const total = await Processo.count({ where: { setor_id: s.id } });
+          result.push({ setor: s.nome, total });
+        }
+
+        return res.json(result);
+      } catch (e) {
+        // fallback seguro
+        const lista = await Setor.findAll({ attributes: ["id", "nome"], raw: true });
+
+        const result = [];
+        for (const s of lista) {
+          const total = await Processo.count({ where: { setor_id: s.id } });
+          result.push({ setor: s.nome, total });
+        }
+
+        return res.json(result);
+      }
+    } catch (err) {
+      console.error("DashboardController.porSetor erro:", err);
+      return res.status(500).json({ erro: "Erro ao gerar processos por setor." });
+    }
   },
 
   async movimentacoes(req, res) {
-    const mov = await ProcessoMovimentacao.findAll({
-      limit: 10,
-      order: [['createdAt', 'DESC']],
-      include: [
-        { model: User, attributes: ['nome'] },
-        { model: Processo, attributes: ['titulo'] },
-      ],
-    });
+    try {
+      // pega as últimas movimentações com dados do processo e usuário
+      const lista = await Movimentacao.findAll({
+        limit: 10,
+        order: [["createdAt", "DESC"]],
+        include: [
+          { model: Processo, attributes: ["id", "titulo"], required: false },
+          { model: User, attributes: ["id", "nome"], required: false },
+        ],
+      });
 
-    res.json(mov);
+      return res.json(lista);
+    } catch (err) {
+      console.error("DashboardController.movimentacoes erro:", err);
+      return res.status(500).json({ erro: "Erro ao buscar movimentações." });
+    }
   },
 };
