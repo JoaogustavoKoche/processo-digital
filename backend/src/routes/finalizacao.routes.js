@@ -1,11 +1,10 @@
-const express = require('express');
-const FinalizacaoController = require('../controllers/FinalizacaoController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const express = require("express");
+const FinalizacaoController = require("../controllers/FinalizacaoController");
+// const auth = require("../middlewares/authMiddleware"); // se voltar token depois
 
 const routes = express.Router();
 
-routes.use(authMiddleware);
-
-routes.post('/', FinalizacaoController.finalizar);
+// Você já usa app.use('/finalizacoes', finalizacaoRoutes)
+routes.put("/processos/:id/finalizar", FinalizacaoController.finalizar);
 
 module.exports = routes;

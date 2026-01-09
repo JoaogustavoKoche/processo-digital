@@ -1,51 +1,60 @@
-const { Processo, Movimentacao, Setor } = require('../models');
+const { Processo, Movimentacao, Setor, sequelize } = require("../models");
 
 module.exports = {
   async tramitar(req, res) {
-  const { processo_id, setor_destino_id, observacao } = req.body;
+    try {
+      const { id } = req.params; // id do processo
+      const { setor_destino_id, usuario_id, descricao } = req.body;
 
-  const processo = await Processo.findOne({
-    where: {
-      id: processo_id,
-      setor_id: req.setorId,
-    },
-  });
+      if (!setor_destino_id) {
+        return res.status(400).json({ erro: "Informe o setor_destino_id." });
+      }
 
-  if (!processo) {
-    return res.status(403).json({
-      erro: 'Processo não pertence ao seu setor',
-    });
-  }
+      const result = await sequelize.transaction(async (t) => {
+        const processo = await Processo.findByPk(id, { transaction: t });
+        if (!processo) return { status: 404, erro: "Processo não encontrado." };
 
-  if (processo.status === 'FINALIZADO') {
-    return res.status(400).json({
-      erro: 'Processo finalizado não pode ser tramitado',
-    });
-  }
+        // bloqueia se finalizado
+        if (String(processo.status || "").toUpperCase() === "FINALIZADO") {
+          return { status: 400, erro: "Processo finalizado não pode ser tramitado." };
+        }
 
-  const setorDestino = await Setor.findByPk(setor_destino_id);
+        const setorDestino = await Setor.findByPk(setor_destino_id, { transaction: t });
+        if (!setorDestino) return { status: 400, erro: "Setor destino inválido." };
 
-  if (!setorDestino) {
-    return res.status(400).json({
-      erro: 'Setor de destino não existe',
-    });
-  }
+        const setorOrigemId = processo.setor_id;
 
-  processo.setor_id = setor_destino_id;
-  processo.status = 'EM ANALISE';
-  await processo.save();
+        if (Number(setorOrigemId) === Number(setor_destino_id)) {
+          return { status: 400, erro: "O setor destino deve ser diferente do setor atual." };
+        }
 
-  await Movimentacao.create({
-    processo_id,
-    usuario_id: req.userId,
-    descricao:
-      observacao || `Processo tramitado para o setor ${setorDestino.nome}`,
-  });
+        // atualiza setor do processo
+        processo.setor_id = Number(setor_destino_id);
+        await processo.save({ transaction: t });
 
-  return res.json({
-    mensagem: 'Processo tramitado com sucesso',
-    processo,
-  });
-}
+        // registra movimentação
+        const texto =
+          descricao && descricao.trim()
+            ? descricao.trim()
+            : `Tramitado do setor ${setorOrigemId || "-"} para ${setorDestino.nome}.`;
 
+        await Movimentacao.create(
+          {
+            processo_id: processo.id,
+            usuario_id: usuario_id ? Number(usuario_id) : null,
+            descricao: texto,
+          },
+          { transaction: t }
+        );
+
+        return { status: 200, data: processo };
+      });
+
+      if (result.erro) return res.status(result.status).json({ erro: result.erro });
+      return res.json(result.data);
+    } catch (err) {
+      console.error("Erro tramitar:", err);
+      return res.status(500).json({ erro: "Erro ao tramitar processo." });
+    }
+  },
 };

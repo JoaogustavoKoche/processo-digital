@@ -10,6 +10,7 @@ const anexoRoutes = require('./routes/anexo.routes');
 const tramitacaoRoutes = require('./routes/tramitacao.routes');
 const finalizacaoRoutes = require('./routes/finalizacao.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const setorRoutes = require("./routes/setor.routes");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/movimentacoes', movimentacaoRoutes);
 app.use('/finalizacoes', finalizacaoRoutes);
 app.use('/tramitacoes', tramitacaoRoutes);
 app.use('/anexos', anexoRoutes);
+app.use("/setores", setorRoutes);
 
 
 app.get('/ping', (req, res) => {

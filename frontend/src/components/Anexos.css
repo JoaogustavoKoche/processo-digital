@@ -1,0 +1,61 @@
+.anexos-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.anexos-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 700;
+}
+
+.anexos-btn:hover {
+  background: #115e59;
+}
+
+.anexos-erro {
+  color: #dc2626;
+  font-weight: 700;
+  margin: 6px 0;
+}
+
+.anexos-vazio {
+  color: #64748b;
+  margin: 0;
+}
+
+.anexos-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.anexos-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.anexos-meta {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.anexos-link {
+  text-decoration: none;
+  font-weight: 800;
+  color: #0f766e;
+}

@@ -1,34 +1,53 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import "./ProcessoDetalhe.css";
+import Anexos from "../components/Anexos";
+
 
 export default function ProcessoDetalhe() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [processo, setProcesso] = useState(null);
-  const [movs, setMovs] = useState([]);
-  const [descricao, setDescricao] = useState("");
-  const [erro, setErro] = useState(null);
+  const [movimentacoes, setMovimentacoes] = useState([]);
+  const [setores, setSetores] = useState([]);
+
   const [loading, setLoading] = useState(true);
-  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState(null);
+
+  const [setorDestinoId, setSetorDestinoId] = useState("");
+  const [descricaoTramitacao, setDescricaoTramitacao] = useState("");
+  const [tramitando, setTramitando] = useState(false);
+
+  const user = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  }, []);
 
   async function carregar() {
     setErro(null);
     setLoading(true);
 
     try {
-      const [pRes, mRes] = await Promise.all([
-        api.get(`/processos/${id}`, { timeout: 8000 }),
-        api.get(`/movimentacoes/${id}`, { timeout: 8000 }),
+      const [procRes, movRes, setRes] = await Promise.all([
+        api.get(`/processos/${id}`),
+        api.get(`/movimentacoes/${id}`),
+        api.get(`/setores`),
       ]);
 
-      setProcesso(pRes.data);
-      setMovs(mRes.data);
+      setProcesso(procRes.data);
+      setMovimentacoes(movRes.data || []);
+      setSetores(setRes.data || []);
     } catch (err) {
       console.error(err);
-      const msg = err?.response?.data?.erro || "Erro ao carregar processo.";
+      const msg =
+        err?.response?.data?.erro ||
+        err?.response?.data?.message ||
+        "Erro ao carregar dados do processo.";
       setErro(msg);
     } finally {
       setLoading(false);
@@ -40,46 +59,100 @@ export default function ProcessoDetalhe() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function adicionarMovimentacao(e) {
-    e.preventDefault();
-    if (!descricao.trim()) return;
-
-    setSalvando(true);
+  async function tramitarProcesso() {
     setErro(null);
 
-    try {
-      await api.post(
-        "/movimentacoes",
-        { processo_id: Number(id), descricao },
-        { timeout: 8000 }
-      );
+    if (!setorDestinoId) {
+      setErro("Selecione um setor destino.");
+      return;
+    }
 
-      setDescricao("");
+    setTramitando(true);
+
+    try {
+      await api.put(`/tramitacoes/processos/${id}/tramitar`, {
+        setor_destino_id: Number(setorDestinoId),
+        usuario_id: user?.id ? Number(user.id) : null,
+        descricao: descricaoTramitacao,
+      });
+
+      setSetorDestinoId("");
+      setDescricaoTramitacao("");
+
       await carregar();
     } catch (err) {
       console.error(err);
       const msg =
-        err?.response?.data?.erro || "Erro ao adicionar movimentação.";
+        err?.response?.data?.erro ||
+        err?.response?.data?.message ||
+        "Erro ao tramitar processo.";
       setErro(msg);
     } finally {
-      setSalvando(false);
+      setTramitando(false);
     }
   }
 
-  if (loading) return <p className="pd-state">Carregando...</p>;
-  if (erro) return <p className="pd-state pd-error">{erro}</p>;
-  if (!processo) return <p className="pd-state">Processo não encontrado.</p>;
+  const setorAtualNome =
+    processo?.setor?.nome ||
+    setores.find((s) => String(s.id) === String(processo?.setor_id))?.nome ||
+    "-";
+
+  const statusLabel = (processo?.status || "ABERTO").toUpperCase();
+
+  if (loading) return <p className="pd-loading">Carregando...</p>;
+
+  if (erro)
+    return (
+      <div className="pd-wrap">
+        <div className="pd-top">
+          <button className="pd-btn" onClick={() => navigate("/processos")}>
+            ← Voltar
+          </button>
+          <button className="pd-btn" onClick={carregar}>
+            Atualizar
+          </button>
+        </div>
+
+        <p className="pd-erro">{erro}</p>
+      </div>
+    );
+
+  if (!processo)
+    return (
+      <div className="pd-wrap">
+        <div className="pd-top">
+          <button className="pd-btn" onClick={() => navigate("/processos")}>
+            ← Voltar
+          </button>
+        </div>
+        <p className="pd-erro">Processo não encontrado.</p>
+      </div>
+    );
 
   return (
-    <div className="pd-container">
+    <div className="pd-wrap">
       <div className="pd-top">
         <button className="pd-btn" onClick={() => navigate("/processos")}>
-          Voltar
+          ← Voltar
         </button>
 
-        <button className="pd-btn" onClick={carregar}>
-          Atualizar
-        </button>
+        <div className="pd-actions">
+          {processo?.setor_id && (
+            <button
+              className="pd-btn"
+              onClick={() =>
+                navigate(`/processos?setor_id=${encodeURIComponent(processo.setor_id)}`)
+              }
+              title="Ver lista filtrada por setor"
+            >
+              Ver setor atual
+            </button>
+          )}
+
+          <button className="pd-btn" onClick={carregar}>
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <div className="pd-card">
@@ -88,80 +161,103 @@ export default function ProcessoDetalhe() {
             #{processo.id} — {processo.titulo}
           </h1>
 
-          <span className={`pd-status ${String(processo.status || "ABERTO").toLowerCase()}`}>
-            {processo.status || "ABERTO"}
+          <span className={`pd-status ${statusLabel.toLowerCase()}`}>
+            {statusLabel}
           </span>
         </div>
 
-        <p className="pd-desc">{processo.descricao || "-"}</p>
-
         <div className="pd-meta">
           <div>
-            <span className="pd-meta-label">Setor</span>
-            <span className="pd-meta-value">
-              {processo.setor?.nome || processo.setor_id || "-"}
-            </span>
+            <span className="pd-meta-label">Setor atual:</span>{" "}
+            <strong>{setorAtualNome}</strong> (ID {processo.setor_id || "-"})
           </div>
 
           <div>
-            <span className="pd-meta-label">Criado por</span>
-            <span className="pd-meta-value">
-              {processo.user?.nome || processo.criado_por || "-"}
-            </span>
+            <span className="pd-meta-label">Criado por:</span>{" "}
+            <strong>{processo.User?.nome || processo.user?.nome || "-"}</strong>
           </div>
+        </div>
+
+        <div className="pd-desc">
+          <h2 className="pd-subtitle">Descrição</h2>
+          <p>{processo.descricao || "-"}</p>
         </div>
       </div>
 
-      <div className="pd-grid">
-        <div className="pd-card">
-          <h2 className="pd-section-title">Linha do tempo</h2>
+      {/* TRAMITAÇÃO */}
+      <div className="pd-card">
+        <h2 className="pd-subtitle">Tramitação</h2>
 
-          {movs.length === 0 ? (
-            <p className="pd-empty">Nenhuma movimentação ainda.</p>
-          ) : (
-            <ul className="pd-timeline">
-              {movs.map((m) => (
-                <li key={m.id} className="pd-timeline-item">
-                  <div className="pd-dot" />
-                  <div className="pd-timeline-content">
-                    <p className="pd-mov-desc">{m.descricao}</p>
-                    <p className="pd-mov-meta">
-                      {m.usuario || m.usuario?.nome || "-"}{" "}
-                      <span className="pd-sep">•</span>{" "}
-                      {m.criado_em
-                        ? new Date(m.criado_em).toLocaleString()
-                        : m.createdAt
-                        ? new Date(m.createdAt).toLocaleString()
-                        : "-"}
-                    </p>
-                  </div>
-                </li>
+        <div className="pd-row">
+          <select
+            className="pd-select"
+            value={setorDestinoId}
+            onChange={(e) => setSetorDestinoId(e.target.value)}
+          >
+            <option value="">Selecione o setor destino</option>
+            {setores
+              .filter((s) => String(s.id) !== String(processo.setor_id))
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome}
+                </option>
               ))}
-            </ul>
-          )}
+          </select>
+
+          <button
+            className="pd-btn pd-btn-primary"
+            onClick={tramitarProcesso}
+            disabled={!setorDestinoId || tramitando}
+          >
+            {tramitando ? "Tramitando..." : "Tramitar"}
+          </button>
         </div>
 
-        <div className="pd-card">
-          <h2 className="pd-section-title">Adicionar movimentação</h2>
+        <textarea
+          className="pd-textarea"
+          value={descricaoTramitacao}
+          onChange={(e) => setDescricaoTramitacao(e.target.value)}
+          placeholder="Descrição (opcional): motivo, observação, encaminhamento..."
+          rows={3}
+        />
+      </div>
 
-          <form onSubmit={adicionarMovimentacao} className="pd-form">
-            <textarea
-              className="pd-textarea"
-              placeholder="Descreva a movimentação (ex: Recebido, encaminhado, solicitado documento...)"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              rows={6}
-            />
+          {/* ANEXOS */}
+    <div className="pd-card">
+      <h2 className="pd-subtitle">Anexos</h2>
 
-            <button className="pd-btn pd-btn-primary" disabled={salvando}>
-              {salvando ? "Salvando..." : "Registrar"}
-            </button>
-          </form>
+      <Anexos processoId={processo.id} />
+    </div>
 
-          <p className="pd-hint">
-            Dica: cada registro aqui vira um item na linha do tempo do processo.
-          </p>
-        </div>
+
+      {/* LINHA DO TEMPO */}
+      <div className="pd-card">
+        <h2 className="pd-subtitle">Linha do tempo</h2>
+
+        {movimentacoes.length === 0 ? (
+          <p className="pd-muted">Sem movimentações ainda.</p>
+        ) : (
+          <ul className="pd-timeline">
+            {movimentacoes.map((m) => (
+              <li key={m.id} className="pd-timeline-item">
+                <div className="pd-dot" />
+                <div className="pd-timeline-content">
+                  <div className="pd-timeline-top">
+                    <strong>{m.usuario?.nome || m.usuario || "-"}</strong>
+                    <span className="pd-time">
+                      {m.createdAt
+                        ? new Date(m.createdAt).toLocaleString()
+                        : m.criado_em
+                        ? new Date(m.criado_em).toLocaleString()
+                        : ""}
+                    </span>
+                  </div>
+                  <div className="pd-timeline-desc">{m.descricao}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

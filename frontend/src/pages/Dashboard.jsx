@@ -1,137 +1,146 @@
-// src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { Card, CardContent } from "../components/Card";
 import "./Dashboard.css";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+
   const [resumo, setResumo] = useState(null);
   const [porSetor, setPorSetor] = useState([]);
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [erro, setErro] = useState(null);
 
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  })();
+
+  const setorIdUsuario = user?.setor_id ? String(user.setor_id) : "";
+
   useEffect(() => {
-    let cancelado = false;
-
-    async function carregarDashboard() {
+    async function carregar() {
       try {
-        const config = { timeout: 8000 };
-
         const [resumoRes, setorRes, movRes] = await Promise.all([
-          api.get("/dashboard/resumo", config),
-          api.get("/dashboard/setores", config),
-          api.get("/dashboard/movimentacoes", config),
+          api.get("/dashboard/resumo"),
+          api.get("/dashboard/setores"),
+          api.get("/dashboard/movimentacoes"),
         ]);
-
-        if (cancelado) return;
 
         setResumo(resumoRes.data);
         setPorSetor(setorRes.data);
         setMovimentacoes(movRes.data);
       } catch (err) {
-        console.error("Erro dashboard:", err);
-
-        if (err?.code === "ECONNABORTED") {
-          setErro("Timeout: o backend não respondeu em 8s.");
-          return;
-        }
-
-        const serverMsg =
-          err?.response?.data?.erro || err?.response?.data?.message;
-
-        setErro(serverMsg || "Erro ao conectar com o servidor backend.");
+        console.error(err);
+        setErro("Erro ao conectar com o backend.");
       }
     }
 
-    carregarDashboard();
-
-    return () => {
-      cancelado = true;
-    };
+    carregar();
   }, []);
 
-  if (erro) return <p className="state-error">{erro}</p>;
-  if (!resumo) return <p className="state-text">Carregando...</p>;
+  function irParaMeusProcessos() {
+    if (!setorIdUsuario) {
+      alert("Usuário sem setor definido. Verifique o user.setor_id no localStorage.");
+      return;
+    }
+    navigate(`/processos?setor_id=${encodeURIComponent(setorIdUsuario)}`);
+  }
+
+  if (erro) return <p className="p-6 dash-error">{erro}</p>;
+  if (!resumo) return <p className="p-6">Carregando...</p>;
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header">
+    <div className="dash-container">
+      <div className="dash-header">
         <div>
-          <h1 className="dashboard-title">Dashboard</h1>
-          <p className="dashboard-subtitle">
-            Visão geral dos processos, setores e movimentações recentes
+          <h1 className="dash-title">Dashboard</h1>
+          <p className="dash-subtitle">
+            {user?.nome ? `Usuário: ${user.nome}` : "Usuário não identificado"}{" "}
+            {setorIdUsuario ? `| Setor ID: ${setorIdUsuario}` : ""}
           </p>
         </div>
 
-        <div className="dashboard-actions">
-          <button
-            type="button"
-            className="btn"
-            onClick={() => window.location.reload()}
-          >
-            Atualizar
+        <div className="dash-actions">
+          <button className="dash-btn dash-btn-primary" onClick={irParaMeusProcessos}>
+            Meus processos (meu setor)
           </button>
-          <button type="button" className="btn btn-primary">
-            Novo Processo
+
+          <button className="dash-btn" onClick={() => navigate("/processos")}>
+            Ver todos os processos
           </button>
         </div>
       </div>
 
-      <div className="kpi-grid">
-        <div className="kpi-card">
-          <p className="kpi-label">Total de Processos</p>
-          <p className="kpi-value">{resumo.total}</p>
-        </div>
+      <div className="dash-cards">
+        <Card>
+          <CardContent className="dash-card">
+            <p className="dash-label">Total de Processos</p>
+            <strong className="dash-value">{resumo.total}</strong>
+          </CardContent>
+        </Card>
 
-        <div className="kpi-card">
-          <p className="kpi-label">Abertos</p>
-          <p className="kpi-value">{resumo.abertos}</p>
-        </div>
+        <Card>
+          <CardContent className="dash-card">
+            <p className="dash-label">Abertos</p>
+            <strong className="dash-value">{resumo.abertos}</strong>
+          </CardContent>
+        </Card>
 
-        <div className="kpi-card">
-          <p className="kpi-label">Em Análise</p>
-          <p className="kpi-value">{resumo.emAnalise}</p>
-        </div>
+        <Card>
+          <CardContent className="dash-card">
+            <p className="dash-label">Em Análise</p>
+            <strong className="dash-value">{resumo.emAnalise}</strong>
+          </CardContent>
+        </Card>
 
-        <div className="kpi-card">
-          <p className="kpi-label">Finalizados</p>
-          <p className="kpi-value">{resumo.finalizados}</p>
-        </div>
+        <Card>
+          <CardContent className="dash-card">
+            <p className="dash-label">Finalizados</p>
+            <strong className="dash-value">{resumo.finalizados}</strong>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="section">
-        <h2 className="section-title">Processos por Setor</h2>
-        <ul className="setor-list">
-          {porSetor.map((s, idx) => (
-            <li key={idx} className="setor-item">
-              {s.setor} <span className="badge">{s.total}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <div className="dash-grid">
+        <Card className="dash-panel">
+          <h2 className="dash-panel-title">Processos por Setor</h2>
+          <ul className="dash-list">
+            {porSetor.map((s, idx) => (
+              <li key={idx}>
+                <strong>{s.setor}</strong>: {s.total}
+              </li>
+            ))}
+          </ul>
+        </Card>
 
-      <div className="section">
-        <h2 className="section-title">Últimas Movimentações</h2>
-
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Processo</th>
-                <th>Descrição</th>
-                <th>Usuário</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movimentacoes.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.processo?.titulo || "-"}</td>
-                  <td>{m.descricao}</td>
-                  <td>{m.usuario?.nome || "-"}</td>
+        <Card className="dash-panel">
+          <h2 className="dash-panel-title">Últimas Movimentações</h2>
+          <div className="dash-table-wrap">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Processo</th>
+                  <th>Descrição</th>
+                  <th>Usuário</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {movimentacoes.map((m) => (
+                  <tr key={m.id}>
+                    <td>{m.processo?.titulo || "-"}</td>
+                    <td>{m.descricao}</td>
+                    <td>{m.usuario?.nome || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       </div>
     </div>
   );

@@ -1,200 +1,130 @@
-/* src/pages/Dashboard.css */
-
-* {
-  box-sizing: border-box;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.dashboard-container {
-  min-height: 100vh;
+.dash-container {
   padding: 24px;
-  background: #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.dashboard-header {
+.dash-header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
 }
 
-.dashboard-title {
+.dash-title {
   margin: 0;
   font-size: 22px;
-  color: #0f172a;
   font-weight: 700;
 }
 
-.dashboard-subtitle {
+.dash-subtitle {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #64748b;
+  color: #475569;
 }
 
-.dashboard-actions {
+.dash-actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.btn {
-  padding: 10px 12px;
-  border-radius: 6px;
+.dash-btn {
   border: 1px solid #cbd5e1;
   background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: background 0.2s, border-color 0.2s;
+  font-size: 14px;
 }
 
-.btn:hover {
+.dash-btn:hover {
   background: #f8fafc;
-  border-color: #94a3b8;
 }
 
-.btn-primary {
-  background: #0f766e;
+.dash-btn-primary {
   border-color: #0f766e;
+  background: #0f766e;
   color: #ffffff;
 }
 
-.btn-primary:hover {
+.dash-btn-primary:hover {
   background: #115e59;
-  border-color: #115e59;
 }
 
-/* Cards do resumo */
-.kpi-grid {
+.dash-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 18px;
+  gap: 12px;
 }
 
-.kpi-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.05);
+.dash-card {
+  padding: 14px;
 }
 
-.kpi-label {
+.dash-label {
+  margin: 0;
   font-size: 12px;
   color: #64748b;
-  margin: 0 0 6px;
 }
 
-.kpi-value {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 800;
-  color: #0f172a;
+.dash-value {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
 }
 
-/* Seções */
-.section {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.05);
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 12px;
 }
 
-.section-title {
-  margin: 0 0 12px;
-  font-size: 15px;
-  font-weight: 800;
-  color: #0f172a;
+.dash-panel {
+  padding: 14px;
 }
 
-/* Lista por setor */
-.setor-list {
+.dash-panel-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dash-list {
   margin: 0;
   padding-left: 18px;
-  color: #0f172a;
+  font-size: 14px;
 }
 
-.setor-item {
-  margin: 6px 0;
-  color: #0f172a;
-}
-
-.badge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #0f766e;
-  background: #ccfbf1;
-  border: 1px solid #99f6e4;
-}
-
-/* Tabela */
-.table-wrap {
+.dash-table-wrap {
   width: 100%;
-  overflow-x: auto;
+  overflow: auto;
 }
 
-.table {
+.dash-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 600px;
+  font-size: 14px;
 }
 
-.table th,
-.table td {
-  text-align: left;
-  padding: 10px 10px;
+.dash-table th,
+.dash-table td {
+  padding: 10px;
   border-bottom: 1px solid #e2e8f0;
-  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
 }
 
-.table th {
-  color: #334155;
-  font-weight: 800;
-  background: #f8fafc;
-}
-
-.table tr:hover td {
-  background: #f8fafc;
-}
-
-/* Estados */
-.state-text {
-  padding: 18px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.state-error {
-  padding: 18px;
+.dash-error {
   color: #dc2626;
-  font-weight: 700;
 }
 
-/* Responsivo */
-@media (max-width: 980px) {
-  .kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
+@media (max-width: 900px) {
+  .dash-cards {
+    grid-template-columns: 1fr 1fr;
   }
-}
-
-@media (max-width: 520px) {
-  .dashboard-container {
-    padding: 16px;
-  }
-
-  .kpi-grid {
+  .dash-grid {
     grid-template-columns: 1fr;
-  }
-
-  .dashboard-header {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }

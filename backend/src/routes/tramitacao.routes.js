@@ -1,11 +1,9 @@
-const express = require('express');
-const TramitacaoController = require('../controllers/TramitacaoController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const express = require("express");
+const TramitacaoController = require("../controllers/TramitacaoController");
 
 const routes = express.Router();
 
-routes.use(authMiddleware);
-
-routes.post('/', TramitacaoController.tramitar);
+// PUT /tramitacoes/processos/:id/tramitar
+routes.put("/processos/:id/tramitar", TramitacaoController.tramitar);
 
 module.exports = routes;

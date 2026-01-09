@@ -1,12 +1,20 @@
-const multer = require('multer');
-const path = require('path');
+const multer = require("multer");
+const path = require("path");
+const crypto = require("crypto");
 
-module.exports = multer({
-  storage: multer.diskStorage({
-    destination: path.resolve(__dirname, '..', '..', 'uploads'),
-    filename: (req, file, cb) => {
-      const nome = Date.now() + '-' + file.originalname;
-      cb(null, nome);
-    },
-  }),
+const uploadFolder = path.resolve(__dirname, "..", "..", "uploads");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadFolder);
+  },
+  filename: (req, file, cb) => {
+    const hash = crypto.randomBytes(8).toString("hex");
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${hash}${ext}`);
+  },
 });
+
+const upload = multer({ storage });
+
+module.exports = upload;

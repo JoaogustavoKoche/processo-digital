@@ -3,25 +3,47 @@ const { Processo, Setor, User } = require("../models");
 module.exports = {
   async criar(req, res) {
     try {
-      const { titulo, descricao, setor_id } = req.body;
+      const { titulo, descricao, setor_id, usuario_id } = req.body;
 
-      const novo = await Processo.create({
-        titulo,
-        descricao,
-        setor_id: setor_id || null,
-        status: "ABERTO",
-      });
+      if (!titulo || !titulo.trim()) {
+        return res.status(400).json({ erro: "Título é obrigatório." });
+      }
 
+      // Detecta se o model tem a coluna status (evita crash se model/banco estiverem divergentes)
+      const attrs = (typeof Processo.getAttributes === "function")
+        ? Processo.getAttributes()
+        : (Processo.rawAttributes || {});
+      const temStatus = !!attrs.status;
+
+      const payload = {
+        titulo: titulo.trim(),
+        descricao: (descricao || "").trim(),
+        setor_id: setor_id ? Number(setor_id) : null,
+        usuario_id: usuario_id ? Number(usuario_id) : null,
+      };
+
+      if (temStatus) payload.status = "ABERTO";
+
+      const novo = await Processo.create(payload);
       return res.status(201).json(novo);
     } catch (err) {
-      console.error(err);
-      return res.status(500).json({ erro: "Erro ao criar processo." });
+      console.error("Erro ao criar processo:", err);
+      return res.status(500).json({
+        erro: "Erro ao criar processo.",
+        detalhe: err?.message || String(err),
+      });
     }
   },
 
   async listar(req, res) {
     try {
+      const { setor_id } = req.query;
+
+      const where = {};
+      if (setor_id) where.setor_id = Number(setor_id);
+
       const lista = await Processo.findAll({
+        where,
         order: [["createdAt", "DESC"]],
         include: [
           { model: Setor, attributes: ["id", "nome"], required: false },
@@ -31,7 +53,7 @@ module.exports = {
 
       return res.json(lista);
     } catch (err) {
-      console.error(err);
+      console.error("ProcessoController.listar erro:", err);
       return res.status(500).json({ erro: "Erro ao listar processos." });
     }
   },
