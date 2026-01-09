@@ -1,59 +1,67 @@
-const { Processo, Movimentacao, Setor, sequelize } = require("../models");
+// backend/src/controllers/TramitacaoController.js
+const { Processo, Setor, Movimentacao } = require("../models");
 
 module.exports = {
   async tramitar(req, res) {
     try {
       const { id } = req.params; // id do processo
-      const { setor_destino_id, usuario_id, descricao } = req.body;
+      const { setor_destino_id, descricao } = req.body;
 
       if (!setor_destino_id) {
-        return res.status(400).json({ erro: "Informe o setor_destino_id." });
+        return res.status(400).json({ erro: "setor_destino_id é obrigatório." });
       }
 
-      const result = await sequelize.transaction(async (t) => {
-        const processo = await Processo.findByPk(id, { transaction: t });
-        if (!processo) return { status: 404, erro: "Processo não encontrado." };
+      // 1) busca processo
+      const processo = await Processo.findByPk(id);
+      if (!processo) {
+        return res.status(404).json({ erro: "Processo não encontrado." });
+      }
 
-        // bloqueia se finalizado
-        if (String(processo.status || "").toUpperCase() === "FINALIZADO") {
-          return { status: 400, erro: "Processo finalizado não pode ser tramitado." };
-        }
+      // 2) REGRA PRINCIPAL: processo precisa estar no setor do usuário
+      // req.setorId vem do middleware auth
+      if (Number(processo.setor_id) !== Number(req.setorId)) {
+        return res.status(403).json({
+          erro: "Você só pode tramitar processos que estão no seu setor.",
+        });
+      }
 
-        const setorDestino = await Setor.findByPk(setor_destino_id, { transaction: t });
-        if (!setorDestino) return { status: 400, erro: "Setor destino inválido." };
+      // 3) valida setor destino
+      const setorDestino = await Setor.findByPk(setor_destino_id);
+      if (!setorDestino) {
+        return res.status(404).json({ erro: "Setor de destino não encontrado." });
+      }
 
-        const setorOrigemId = processo.setor_id;
+      // 4) evita tramitar para o mesmo setor
+      if (Number(setor_destino_id) === Number(processo.setor_id)) {
+        return res.status(400).json({ erro: "O setor de destino deve ser diferente do atual." });
+      }
 
-        if (Number(setorOrigemId) === Number(setor_destino_id)) {
-          return { status: 400, erro: "O setor destino deve ser diferente do setor atual." };
-        }
+      // 5) guarda setor origem para registrar movimentação
+      const setorOrigemId = processo.setor_id;
 
-        // atualiza setor do processo
-        processo.setor_id = Number(setor_destino_id);
-        await processo.save({ transaction: t });
+      // 6) atualiza processo (setor e status opcional)
+      processo.setor_id = Number(setor_destino_id);
+      // opcional: muda status automaticamente
+      // processo.status = "EM_ANALISE";
+      await processo.save();
 
-        // registra movimentação
-        const texto =
-          descricao && descricao.trim()
-            ? descricao.trim()
-            : `Tramitado do setor ${setorOrigemId || "-"} para ${setorDestino.nome}.`;
+      // 7) registra movimentação (linha do tempo)
+      const texto =
+        descricao?.trim() ||
+        `Tramitado do setor ${setorOrigemId} para o setor ${setor_destino_id}`;
 
-        await Movimentacao.create(
-          {
-            processo_id: processo.id,
-            usuario_id: usuario_id ? Number(usuario_id) : null,
-            descricao: texto,
-          },
-          { transaction: t }
-        );
-
-        return { status: 200, data: processo };
+      await Movimentacao.create({
+        processo_id: processo.id,
+        usuario_id: req.userId,
+        descricao: texto,
       });
 
-      if (result.erro) return res.status(result.status).json({ erro: result.erro });
-      return res.json(result.data);
+      return res.json({
+        ok: true,
+        processo,
+      });
     } catch (err) {
-      console.error("Erro tramitar:", err);
+      console.error("TramitacaoController.tramitar erro:", err);
       return res.status(500).json({ erro: "Erro ao tramitar processo." });
     }
   },

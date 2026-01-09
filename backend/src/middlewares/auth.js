@@ -1,23 +1,37 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const { User } = require("../models");
 
-module.exports = (req, res, next) => {
+module.exports = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({ error: 'Token não informado' });
+    return res.status(401).json({ erro: "Token não informado" });
   }
 
-  const [, token] = authHeader.split(' ');
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2) {
+    return res.status(401).json({ erro: "Token mal formatado" });
+  }
+
+  const [scheme, token] = parts;
+
+  if (!/^Bearer$/i.test(scheme)) {
+    return res.status(401).json({ erro: "Token mal formatado" });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, "segredo_digital");
 
-    req.userId = decoded.id;
-    req.setorId = decoded.setor_id;
-    req.perfil = decoded.perfil;
+    const user = await User.findByPk(decoded.id);
+    if (!user) {
+      return res.status(401).json({ erro: "Usuário inválido" });
+    }
+
+    req.userId = user.id;
+    req.setorId = user.setor_id;
 
     return next();
-  } catch {
-    return res.status(401).json({ error: 'Token inválido' });
+  } catch (err) {
+    return res.status(401).json({ erro: "Token inválido" });
   }
 };

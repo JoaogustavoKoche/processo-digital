@@ -1,0 +1,90 @@
+.cu-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.cu-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cu-top h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.cu-form {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+  display: grid;
+  gap: 12px;
+}
+
+.cu-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.cu-form input,
+.cu-form select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.cu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.cu-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.cu-btn:hover {
+  background: #f8fafc;
+}
+
+.cu-btn-primary {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+.cu-btn-primary:hover {
+  background: #115e59;
+}
+
+.cu-erro {
+  margin: 0;
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.cu-ok {
+  margin: 0;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.cu-muted {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+}
