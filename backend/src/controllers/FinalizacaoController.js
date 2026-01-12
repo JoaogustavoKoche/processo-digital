@@ -1,47 +1,43 @@
-const { Processo, Movimentacao, sequelize } = require("../models");
+const { Processo, Movimentacao } = require("../models");
 
 module.exports = {
   async finalizar(req, res) {
-    const { id } = req.params;
-    const { usuario_id } = req.body;
-
     try {
-      const result = await sequelize.transaction(async (t) => {
-        const processo = await Processo.findByPk(id, { transaction: t });
+      const { id } = req.params; // id do processo
+      const { descricao } = req.body;
 
-        if (!processo) {
-          return { status: 404, erro: "Processo não encontrado" };
-        }
+      const processo = await Processo.findByPk(id);
 
-        // Se não existir coluna status no model/banco, retorna erro amigável
-        if (!Object.prototype.hasOwnProperty.call(processo.dataValues, "status")) {
-          return { status: 400, erro: "A coluna 'status' não existe em processos" };
-        }
+      if (!processo) {
+        return res.status(404).json({ erro: "Processo não encontrado." });
+      }
 
-        if (processo.status === "FINALIZADO") {
-          return { status: 400, erro: "Processo já está finalizado" };
-        }
+      // ✅ Regra: só finaliza se o processo estiver no setor do usuário
+      if (Number(processo.setor_id) !== Number(req.setorId)) {
+        return res.status(403).json({
+          erro: "Você só pode finalizar processos que estão no seu setor.",
+        });
+      }
 
-        processo.status = "FINALIZADO";
-        await processo.save({ transaction: t });
+      // evita finalizar 2x
+      if (processo.status === "FINALIZADO") {
+        return res.status(400).json({ erro: "Processo já está finalizado." });
+      }
 
-        await Movimentacao.create(
-          {
-            processo_id: processo.id,
-            usuario_id: usuario_id || processo.usuario_id || null,
-            descricao: `Processo finalizado.`,
-          },
-          { transaction: t }
-        );
+      processo.status = "FINALIZADO";
+      await processo.save();
 
-        return { status: 200, data: processo };
+      // registra no histórico
+      await Movimentacao.create({
+        processo_id: processo.id,
+        usuario_id: req.userId,
+        descricao: descricao?.trim() || "Processo finalizado.",
       });
 
-      if (result.erro) return res.status(result.status).json({ erro: result.erro });
-      return res.json(result.data);
+      return res.json({ ok: true, processo });
     } catch (err) {
-      console.error("Erro finalizar:", err);
-      return res.status(500).json({ erro: "Erro ao finalizar processo" });
+      console.error("FinalizacaoController.finalizar erro:", err);
+      return res.status(500).json({ erro: "Erro ao finalizar processo." });
     }
   },
 };

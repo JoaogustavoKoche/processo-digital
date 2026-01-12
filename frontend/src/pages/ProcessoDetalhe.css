@@ -169,3 +169,13 @@
   line-height: 1.45;
   font-size: 14px;
 }
+
+.pd-btn-danger {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.pd-btn-danger:hover {
+  background: #b91c1c;
+}

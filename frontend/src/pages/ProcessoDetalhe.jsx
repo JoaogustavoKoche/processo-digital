@@ -1,4 +1,3 @@
-// frontend/src/pages/ProcessoDetalhe.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
@@ -20,6 +19,10 @@ export default function ProcessoDetalhe() {
   const [descTramitacao, setDescTramitacao] = useState("");
   const [submittingTramite, setSubmittingTramite] = useState(false);
 
+  // finalização
+  const [descFinalizacao, setDescFinalizacao] = useState("");
+  const [submittingFinal, setSubmittingFinal] = useState(false);
+
   const user = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem("user") || "null");
@@ -28,7 +31,8 @@ export default function ProcessoDetalhe() {
     }
   }, []);
 
-  const podeTramitar = useMemo(() => {
+  // regra visual: só pode tramitar/finalizar se o processo estiver no setor do user
+  const podeMexerNoProcesso = useMemo(() => {
     return Number(processo?.setor_id) === Number(user?.setor_id);
   }, [processo, user]);
 
@@ -70,9 +74,8 @@ export default function ProcessoDetalhe() {
       return;
     }
 
-    // trava UX: só mostra botão quando pode, mas aqui garante também
-    if (!podeTramitar) {
-      setErro("Você não pode tramitar este processo (setor diferente).");
+    if (!podeMexerNoProcesso) {
+      setErro("Você só pode tramitar processos do seu setor.");
       return;
     }
 
@@ -83,7 +86,6 @@ export default function ProcessoDetalhe() {
         descricao: descTramitacao,
       });
 
-      // recarrega tudo para refletir setor novo + linha do tempo
       const [procRes, movRes] = await Promise.all([
         api.get(`/processos/${id}`),
         api.get(`/movimentacoes/${id}`),
@@ -103,6 +105,45 @@ export default function ProcessoDetalhe() {
       setErro(msg);
     } finally {
       setSubmittingTramite(false);
+    }
+  }
+
+  async function finalizar() {
+    setErro(null);
+
+    if (!podeMexerNoProcesso) {
+      setErro("Você só pode finalizar processos do seu setor.");
+      return;
+    }
+
+    if (processo?.status === "FINALIZADO") {
+      setErro("Este processo já está finalizado.");
+      return;
+    }
+
+    setSubmittingFinal(true);
+    try {
+      await api.patch(`/finalizacoes/${id}`, {
+        descricao: descFinalizacao,
+      });
+
+      const [procRes, movRes] = await Promise.all([
+        api.get(`/processos/${id}`),
+        api.get(`/movimentacoes/${id}`),
+      ]);
+
+      setProcesso(procRes.data);
+      setMovs(movRes.data || []);
+      setDescFinalizacao("");
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err?.response?.data?.erro ||
+        err?.response?.data?.message ||
+        "Erro ao finalizar processo.";
+      setErro(msg);
+    } finally {
+      setSubmittingFinal(false);
     }
   }
 
@@ -132,7 +173,8 @@ export default function ProcessoDetalhe() {
             {processo.setor_id})
           </span>
           <span>
-            <strong>Criado por:</strong> {processo.User?.nome || processo.user?.nome || "-"}
+            <strong>Criado por:</strong>{" "}
+            {processo.User?.nome || processo.user?.nome || "-"}
           </span>
         </div>
       </div>
@@ -142,14 +184,14 @@ export default function ProcessoDetalhe() {
         <div className="pd-section-head">
           <h2 className="pd-subtitle">Tramitação</h2>
 
-          {!podeTramitar && (
+          {!podeMexerNoProcesso && (
             <span className="pd-badge">
               Você só pode tramitar processos do seu setor
             </span>
           )}
         </div>
 
-        {podeTramitar ? (
+        {podeMexerNoProcesso ? (
           <>
             <label className="pd-label">
               Setor de destino
@@ -195,6 +237,41 @@ export default function ProcessoDetalhe() {
         )}
       </div>
 
+      {/* FINALIZAÇÃO */}
+      <div className="pd-card">
+        <h2 className="pd-subtitle">Finalização</h2>
+
+        {processo.status === "FINALIZADO" ? (
+          <p className="pd-muted">
+            ✅ Este processo está <strong>FINALIZADO</strong>.
+          </p>
+        ) : podeMexerNoProcesso ? (
+          <>
+            <label className="pd-label">
+              Observação (opcional)
+              <input
+                className="pd-input"
+                value={descFinalizacao}
+                onChange={(e) => setDescFinalizacao(e.target.value)}
+                placeholder="Ex: Processo concluído e arquivado..."
+              />
+            </label>
+
+            <button
+              className="pd-btn pd-btn-danger"
+              onClick={finalizar}
+              disabled={submittingFinal}
+            >
+              {submittingFinal ? "Finalizando..." : "Finalizar Processo"}
+            </button>
+          </>
+        ) : (
+          <p className="pd-muted">
+            Somente o setor atual do processo pode finalizar.
+          </p>
+        )}
+      </div>
+
       {/* LINHA DO TEMPO */}
       <div className="pd-card">
         <h2 className="pd-subtitle">Linha do tempo</h2>
@@ -206,11 +283,11 @@ export default function ProcessoDetalhe() {
             {movs.map((m) => (
               <li key={m.id} className="pd-timeline-item">
                 <div className="pd-timeline-top">
-                  <strong>{m.usuario?.nome || m.user?.nome || m.usuario || "-"}</strong>
+                  <strong>
+                    {m.usuario?.nome || m.user?.nome || m.usuario || "-"}
+                  </strong>
                   <span className="pd-date">
-                    {m.createdAt
-                      ? new Date(m.createdAt).toLocaleString()
-                      : ""}
+                    {m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}
                   </span>
                 </div>
                 <p className="pd-timeline-desc">{m.descricao}</p>
